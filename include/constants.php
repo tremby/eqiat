@@ -13,7 +13,7 @@ licence -- see the LICENCE file for more details
 
 // program
 define("PROGRAMNAME", "Eqiat");
-define("VERSION", "0.3");
+define("VERSION", "0.3~bpc");
 
 // filesystem path to the eqiat root directory -- one level above this file, 
 // ending in a trailing slash
@@ -45,12 +45,12 @@ define("NS_IMSMD", "http://www.imsglobal.org/xsd/imsmd_v1p2");
 define("QTIENGINE_HOST", "qtiengine.qtitools.org");
 
 // site title
-define("SITE_TITLE", PROGRAMNAME);
+define("SITE_TITLE", PROGRAMNAME . "-BPC");
 
 // use the "deposit in Edshare" action
-define("DIEA_AVAILABLE", false);
+define("DIEA_AVAILABLE", true);
 
 // host of Edshare (set and uncomment)
-//define("DIEA_EDSHARE_HOST", "edshare.soton.ac.uk");
+define("DIEA_EDSHARE_HOST", "lslvm-pz1.ecs.soton.ac.uk");
 
 ?>
