@@ -28,6 +28,10 @@ class EditAssessmentItemAction extends ItemAction {
 
 	public function getLogic() {
 		// nothing posted -- show form with data as is (possibly empty)
+
+		// get video URL from stimulus
+		$this->ai->stimulusToVideo();
+
 		$this->ai->showForm();
 	}
 
@@ -50,6 +54,18 @@ class EditAssessmentItemAction extends ItemAction {
 
 			unset($olditem);
 		}
+
+		// turn video URL into stimulus XHTML
+		ob_start();
+		?>
+		<div>
+			<object id="flowplayer" width="510" height="330" type="application/x-shockwave-flash" data="http://lslvm-pz1.ecs.soton.ac.uk/flowplayer/flowplayer-3.1.5.swf">
+				<param valuetype="DATA" name="movie" value="http://lslvm-pz1.ecs.soton.ac.uk/flowplayer/flowplayer-3.1.5.swf"/>
+				<param valuetype="DATA" name="flashvars" value="config={'clip':{'scaling':'fit','autoPlay':false,'url':'<?php echo xmlspecialchars($_POST["video"]); ?>'},'playerId':'flowplayer'}"/>
+			</object>
+		</div>
+		<?php
+		$_POST["stimulus"] = ob_get_clean();
 
 		if ($this->ai->getQTI($_POST) === false) {
 			// problem of some kind, show the form again with any messages

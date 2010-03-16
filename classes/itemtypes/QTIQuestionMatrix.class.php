@@ -16,7 +16,7 @@ class QTIQuestionMatrix extends QTIAssessmentItem {
 		return "question matrix";
 	}
 	public function itemTypeDescription() {
-		return "A stimulus followed by a number of question prompts. The candidate selects true or false for each.";
+		return "A video followed by a number of question prompts. The candidate selects true or false for each.";
 	}
 
 	protected function headerJS() {

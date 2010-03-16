@@ -16,7 +16,7 @@ class QTIMultipleChoice extends QTIMultipleChoiceResponse {
 		return "multiple choice";
 	}
 	public function itemTypeDescription() {
-		return "A stimulus followed by a question prompt and a number of possible responses. The candidate chooses the correct response.";
+		return "A video followed by a question prompt and a number of possible responses. The candidate chooses the correct response.";
 	}
 }
 

@@ -16,7 +16,7 @@ class QTIExtendedMatchingItem extends QTIAssessmentItem {
 		return "extended matching item";
 	}
 	public function itemTypeDescription() {
-		return "A stimulus followed by a number of possible responses and then a number of question prompts. The candidate checks each response which is correct for each question prompt.";
+		return "A video followed by a number of possible responses and then a number of question prompts. The candidate checks each response which is correct for each question prompt.";
 	}
 
 	protected function headerJS() {

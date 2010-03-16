@@ -95,26 +95,18 @@ edititemsubmitcheck = function() {
 		return false;
 	}
 
+	// video must be set
+	if ($("#video").val().length == 0) {
+		$.scrollTo($("#video").addClass("error"), scrollduration, scrolloptions);
+		alert("A video URL must be set");
+		return false;
+	}
+
 	// item-specific errors
 	if (typeof edititemsubmitcheck_itemspecificerrors == "function" && !edititemsubmitcheck_itemspecificerrors())
 		return false;
 
 	// common warnings
-
-	// confirm the user wanted an empty stimulus
-	if ($("#stimulus").val().length == 0) {
-		if ($("#stimulus_parent").is(":visible")) {
-			$("#stimulus_ifr").contents().find("body").addClass("warning");
-			$.scrollTo($("#stimulus_parent").addClass("warning"), scrollduration, scrolloptions);
-		} else
-			$.scrollTo($("#stimulus").addClass("warning"), scrollduration, scrolloptions);
-		if (!confirm("Stimulus is empty -- click OK to continue regardless or cancel to edit it"))
-			return false;
-		else {
-			$("#stimulus").removeClass("error warning");
-			$("#stimulus_ifr").contents().find("body").removeClass("error warning");
-		}
-	}
 
 	// item-specific warnings
 	if (typeof edititemsubmitcheck_itemspecificwarnings == "function" && !edititemsubmitcheck_itemspecificwarnings())

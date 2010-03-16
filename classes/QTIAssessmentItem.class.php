@@ -144,8 +144,11 @@ abstract class QTIAssessmentItem {
 					<dt><label for="keywords">Keywords (comma-separated)</label></dt>
 					<dd><textarea id="keywords" name="keywords" rows="4" cols="64"><?php echo htmlspecialchars(implode(", ", $this->getKeywords())); ?></textarea></dd>
 
-					<dt><label for="stimulus">Stimulus</label></dt>
-					<dd><textarea class="qtitinymce resizable" rows="8" cols="64" name="stimulus" id="stimulus"><?php if (isset($this->data["stimulus"])) echo htmlspecialchars($this->data["stimulus"]); ?></textarea></dd>
+					<dt><label for="video">Video URL</label></dt>
+					<dd>
+						<input size="64" type="text" name="video" id="video"<?php if (isset($this->data["video"])) { ?> value="<?php echo htmlspecialchars($this->data["video"]); ?>"<?php } ?>>
+						<span class="hint">This should be the URL of a Flash video file (FLV)</span>
+					</dd>
 
 					<?php echo $this->formHTML(); ?>
 
@@ -465,6 +468,14 @@ abstract class QTIAssessmentItem {
 		if (!isset($_SESSION["items"]) || !isset($_SESSION["items"][$this->getQTIID()]))
 			return;
 		unset($_SESSION["items"][$this->getQTIID()]);
+	}
+
+	// stimulus to video
+	public function stimulusToVideo() {
+		if (!isset($this->data["stimulus"]))
+			return;
+
+		$this->data["video"] = preg_replace('%.*<object\b[^>]*>.*?<param\b[^>]*\b(?:name="flashvars"[^>]*\bvalue="[^"]*\'url\':\'(.*?)\'[^"]*"|value="[^"]*\'url\':\'(.*?)\'[^"]*"[^>]*\bname="flashvars")[^>]*/>.*?</object>.*%is', '\\1\\2', $this->data["stimulus"]);
 	}
 
 

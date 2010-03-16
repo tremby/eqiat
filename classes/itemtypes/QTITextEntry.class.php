@@ -16,7 +16,7 @@ class QTITextEntry extends QTIAssessmentItem {
 		return "text entry";
 	}
 	public function itemTypeDescription() {
-		return "A stimulus or question prompt followed by a body of text with gaps. The candidate enters the appropriate words to complete the text.";
+		return "A video followed by a body of text with gaps. The candidate enters the appropriate words to complete the text.";
 	}
 
 	protected function headerJS() {
