@@ -93,7 +93,7 @@ class DepositInEdshareAction extends ItemAction {
 
 		$curl = curl_init();
 		curl_setopt_array($curl, array(
-			CURLOPT_URL				=>	"http://" . DIEA_EDSHARE_HOST . "/sword-app/deposit/inbox",
+			CURLOPT_URL				=>	"http://" . DIEA_EDSHARE_HOST . "/sword-app/deposit/archive",
 			CURLOPT_POST			=>	true,
 			CURLOPT_HEADER			=>	true,
 			CURLOPT_USERPWD			=>	$_POST["diea_username"] . ":" . $_POST["diea_password"],
