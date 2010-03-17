@@ -47,6 +47,7 @@ class DepositInEdshareAction extends ItemAction {
 		$servicedocxml = simplexml_load_string($_SESSION["diea_servicedocxml"]);
 		$collections = array();
 		foreach ($servicedocxml->workspace->collection as $collection) {
+			// skip if the collection doesn't accept zip files
 			$acceptzip = false;
 			foreach ($collection->accept as $accept) {
 				if ((string) $accept == "application/zip") {
@@ -56,26 +57,22 @@ class DepositInEdshareAction extends ItemAction {
 			}
 			if (!$acceptzip)
 				continue;
-			$coll = array("href" => (string) $collection["href"]);
 
-			$children = $collection->children("http://www.w3.org/2005/Atom");
-			foreach ($children as $child) {
+			// pull out collection details (the namespaces make this awkward)
+			$coll = array("href" => (string) $collection["href"]);
+			foreach ($collection->children("http://www.w3.org/2005/Atom") as $child) {
 				if ($child->getName() == "title") {
 					$coll["title"] = (string) $child;
 					break;
 				}
 			}
-
-			$children = $collection->children("http://purl.org/net/sword/");
-			foreach ($children as $child) {
+			foreach ($collection->children("http://purl.org/net/sword/") as $child) {
 				if ($child->getName() == "collectionPolicy")
 					$coll["collectionPolicy"] = (string) $child;
 				else if ($child->getName() == "treatment")
 					$coll["treatment"] = (string) $child;
 			}
-
-			$children = $collection->children("http://purl.org/dc/terms/");
-			foreach ($children as $child) {
+			foreach ($collection->children("http://purl.org/dc/terms/") as $child) {
 				if ($child->getName() == "abstract") {
 					$coll["abstract"] = (string) $child;
 					break;
@@ -204,6 +201,7 @@ class DepositInEdshareAction extends ItemAction {
 					}
 				}
 
+				// show "deposited" message and give link to the share
 				$GLOBALS["title"] = "Item deposited in Edshare";
 				include "htmlheader.php";
 				?>
@@ -212,7 +210,26 @@ class DepositInEdshareAction extends ItemAction {
 					<p>Edshare returned the following information:</p>
 					<p><blockquote><?php echo htmlspecialchars($treatment); ?></blockquote></p>
 				<?php } ?>
-				<p>You can now <a href="http://<?php echo DIEA_EDSHARE_HOST; ?>/cgi/users/home?screen=EPrint::Summary&amp;eprintid=<?php echo $eprintid; ?>">view the item in Edshare</a></p>
+				<?php if (strpos($_POST["collection"], "/sword-app/deposit/archive") === false) { ?>
+					<p>
+						The item is not yet live in the repository. As the owner 
+						you can still
+						<a href="http://<?php echo DIEA_EDSHARE_HOST; ?>/cgi/users/home?screen=EPrint::Summary&amp;eprintid=<?php echo $eprintid; ?>">view it</a>
+						or edit it (including setting it live) in Edshare.
+					</p>
+					<p>
+						Once the item is live it'll be visible to the world at the following address.
+						<br>
+						<tt>http://<?php echo DIEA_EDSHARE_HOST; ?>/<?php echo $eprintid; ?></tt>
+					</p>
+				<?php } else { ?>
+					<p>
+						The item is now live in Edshare and you and others can 
+						view it at the following address.
+						<br>
+						<tt><a href="http://<?php echo DIEA_EDSHARE_HOST; ?>/<?php echo $eprintid; ?>">http://<?php echo DIEA_EDSHARE_HOST; ?>/<?php echo $eprintid; ?></a></tt>
+					</p>
+				<?php } ?>
 				<?php
 				include "htmlfooter.php";
 
@@ -238,13 +255,8 @@ class DepositInEdshareAction extends ItemAction {
 		return $this->repoidxml;
 	}
 
-	// return the repository name
-	private function repoName() {
-		return (string) $this->repoIDXML()->Identify->repositoryName;
-	}
-
 	// populate properties we can get without logging in
-	private function getRepoDescription() {
+	private function populatePublicRepoDetails() {
 		if (!is_null($this->repocontent))
 			return;
 
@@ -252,6 +264,7 @@ class DepositInEdshareAction extends ItemAction {
 			if (!count($description->eprints))
 				continue;
 
+			$this->reponame = (string) $this->repoIDXML()->Identify->repositoryName;
 			$this->repocontent = (string) $description->eprints->content->text;
 			$this->repometadatapolicy = (string) $description->eprints->metadataPolicy->text;
 			$this->repodatapolicy = (string) $description->eprints->dataPolicy->text;
@@ -261,20 +274,24 @@ class DepositInEdshareAction extends ItemAction {
 	}
 
 	// get those properties
+	private function repoName() {
+		$this->populatePublicRepoDetails();
+		return $this->reponame;
+	}
 	private function repoContent() {
-		$this->getRepoDescription();
+		$this->populatePublicRepoDetails();
 		return $this->repocontent;
 	}
 	private function repoMetadataPolicy() {
-		$this->getRepoDescription();
+		$this->populatePublicRepoDetails();
 		return $this->repometadatapolicy;
 	}
 	private function repoDataPolicy() {
-		$this->getRepoDescription();
+		$this->populatePublicRepoDetails();
 		return $this->repodatapolicy;
 	}
 	private function repoSubmissionPolicy() {
-		$this->getRepoDescription();
+		$this->populatePublicRepoDetails();
 		return $this->reposubmissionpolicy;
 	}
 
