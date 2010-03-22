@@ -52,7 +52,7 @@ ul li, ol li {
 
 #header {
 	border-bottom: 1px solid #ccc;
-	background-color: #dde;
+	background-color: #ded;
 	padding: 0.5em;
 	position: relative;
 }
@@ -119,7 +119,7 @@ input[type=submit] {
 }
 
 h2 {
-	background-color: #f8f8ff;
+	background-color: #f8fff8;
 	border-style: solid none;
 	border-width: 1px;
 	border-color: #ddd;
