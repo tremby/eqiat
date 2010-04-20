@@ -13,7 +13,7 @@ licence -- see the LICENCE file for more details
 
 // program
 define("PROGRAMNAME", "Eqiat");
-define("VERSION", "0.4~bpc");
+define("VERSION", "0.5~bpc");
 
 // filesystem path to the eqiat root directory -- one level above this file, 
 // ending in a trailing slash
@@ -46,6 +46,9 @@ define("QTIENGINE_HOST", "qtiengine.qtitools.org");
 
 // site title
 define("SITE_TITLE", PROGRAMNAME . "-BPC");
+
+// session variable name prefix
+define("SESSION_PREFIX", PROGRAMNAME . "_");
 
 // use the "deposit in Edshare" action
 define("DIEA_AVAILABLE", true);

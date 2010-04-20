@@ -34,7 +34,6 @@ abstract class QTIAssessmentItem {
 		if ($id === false)
 			return;
 
-		$this->modified = time();
 		$this->setQTIID($id);
 		$this->setMID();
 	}
@@ -97,8 +96,8 @@ abstract class QTIAssessmentItem {
 	 * implementing the functions
 	 * 	edititemsubmitcheck_itemspecificwarnings
 	 * 	edititemsubmitcheck_itemspecificerrors
-	 * which should return show any warning or error messages and then return 
-	 * true if submission should continue or false if it should be aborted.
+	 * which should show any warning or error messages and then return true if 
+	 * submission should continue or false if it should be aborted.
 	 * If possible, indicate the elements on which warnings or errors occured by 
 	 * adding the appropriate CSS class ("warning" or "error").
 	 * Additionally, if defined the function
@@ -120,6 +119,11 @@ abstract class QTIAssessmentItem {
 	/* --------------------------------------------------------------------- */
 	/* public utility methods                                                */
 	/* --------------------------------------------------------------------- */
+
+	// touch the item -- update its modification date to now
+	public function touch() {
+		$this->modified = time();
+	}
 
 	// render the authoring form
 	public function showForm($data = null) {
@@ -166,11 +170,10 @@ abstract class QTIAssessmentItem {
 
 	// get QTI as SimpleXML object
 	public function getQTI($data = null) {
-		if (is_null($data)) {
-			if (!is_null($this->qti))
-				return simplexml_load_string($this->qti);
-		} else
+		if (!is_null($data))
 			$this->data = $data;
+		else if (!is_null($this->qti))
+			return simplexml_load_string($this->qti);
 
 		// don't even bother if title isn't set -- probably an abandoned item
 		if (is_null($this->data("title")))
@@ -181,7 +184,7 @@ abstract class QTIAssessmentItem {
 		$this->warnings = array();
 		$this->messages = array();
 
-		$this->modified = time();
+		$this->touch();
 		$qti = $this->buildQTI();
 		if (!$qti)
 			return false;
@@ -197,7 +200,7 @@ abstract class QTIAssessmentItem {
 		if (!$this->getQTI())
 			return false;
 
-		return simplexml_indented_string($this->getQTI());
+		return $this->qti;
 	}
 
 	// get QTI identifier
@@ -210,15 +213,14 @@ abstract class QTIAssessmentItem {
 		return $this->midentifier;
 	}
 
-	// set QTI identifier or generate a new one if none given and update session 
-	// memory
+	// set QTI identifier or generate a new one if none given
 	public function setQTIID($identifier = null) {
-		$this->sessionRemove();
+		$this->touch();
+		$this->clearQTI();
 		if (is_null($identifier))
 			$this->identifier = "ITEM_" . md5(uniqid());
 		else
 			$this->identifier = $identifier;
-		$this->sessionStore();
 	}
 
 	// get the item as a content package as a binary zip string
@@ -404,8 +406,10 @@ abstract class QTIAssessmentItem {
 
 		// two arguments -- set the data item indicated by the first argument to 
 		// the value in the second argument
-		if (count($args) == 2)
+		if (count($args) == 2) {
+			$this->clearQTI();
 			return $this->data[$args[0]] = $args[1];
+		}
 
 		// more than two arguments -- error
 		trigger_error("Too many arguments to QTIAssessmentItem::data -- expected 0, 1 or 2", E_USER_ERROR);
@@ -434,6 +438,30 @@ abstract class QTIAssessmentItem {
 		return array_unique($keywords);
 	}
 
+	// store the item in session memory
+	public function sessionStore() {
+		if (!isset($_SESSION[SESSION_PREFIX . "items"]) || !is_array($_SESSION[SESSION_PREFIX . "items"]))
+			$_SESSION[SESSION_PREFIX . "items"] = array();
+		$_SESSION[SESSION_PREFIX . "items"][$this->getQTIID()] = $this;
+	}
+
+	// remove the item from session memory
+	public function sessionRemove() {
+		if (!isset($_SESSION[SESSION_PREFIX . "items"]) || !isset($_SESSION[SESSION_PREFIX . "items"][$this->getQTIID()]))
+			return;
+		unset($_SESSION[SESSION_PREFIX . "items"][$this->getQTIID()]);
+	}
+
+	// return true if the item is OK (valid QTI can be generated and there are 
+	// no errors)
+	public function itemOK() {
+		return $this->getQTI() && !count($this->getErrors());
+	}
+
+	/* --------------------------------------------------------------------- */
+	/* protected utility methods                                             */
+	/* --------------------------------------------------------------------- */
+
 	// return an initial SimpleXML assessmentItem element
 	protected function initialXML() {
 		$ai = new SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?>
@@ -456,18 +484,10 @@ abstract class QTIAssessmentItem {
 		return $ai;
 	}
 
-	// store the item in session memory
-	public function sessionStore() {
-		if (!isset($_SESSION["items"]) || !is_array($_SESSION["items"]))
-			$_SESSION["items"] = array();
-		$_SESSION["items"][$this->getQTIID()] = $this;
-	}
-
-	// remove the item from session memory
-	public function sessionRemove() {
-		if (!isset($_SESSION["items"]) || !isset($_SESSION["items"][$this->getQTIID()]))
-			return;
-		unset($_SESSION["items"][$this->getQTIID()]);
+	// clear the qti property so that the QTI will be rebuilt next time it's 
+	// asked for
+	protected function clearQTI() {
+		$this->qti = null;
 	}
 
 	// stimulus to video
@@ -512,18 +532,18 @@ abstract class QTIAssessmentItem {
 	// get a QTIAssessmentItem object from session memory given a QTIID string
 	// return false if it is not found
 	public static function fromQTIID($qtiid) {
-		if (!isset($_SESSION["items"]))
+		if (!isset($_SESSION[SESSION_PREFIX . "items"]))
 			return false;
-		if (!isset($_SESSION["items"][$qtiid]))
+		if (!isset($_SESSION[SESSION_PREFIX . "items"][$qtiid]))
 			return false;
-		return $_SESSION["items"][$qtiid];
+		return $_SESSION[SESSION_PREFIX . "items"][$qtiid];
 	}
 
 	// return an array of all items in session memory
 	public static function allItems() {
-		if (!isset($_SESSION["items"]))
+		if (!isset($_SESSION[SESSION_PREFIX . "items"]))
 			return array();
-		return $_SESSION["items"];
+		return $_SESSION[SESSION_PREFIX . "items"];
 	}
 }
 
