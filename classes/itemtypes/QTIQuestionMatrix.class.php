@@ -215,9 +215,13 @@ class QTIQuestionMatrix extends QTIAssessmentItem {
 				simplexml_append($ib, $stimulus);
 		}
 
+		// div with class eqiat-qm
+		$d = $ib->addChild("div");
+		$d->addAttribute("class", "eqiat-qm");
+
 		// questions
 		for ($q = 0; array_key_exists("question_{$q}_prompt", $this->data); $q++) {
-			$ci = $ib->addChild("choiceInteraction");
+			$ci = $d->addChild("choiceInteraction");
 			$ci->addAttribute("maxChoices", "1");
 			$ci->addAttribute("shuffle", "false");
 			$ci->addAttribute("responseIdentifier", "RESPONSE_question_$q");
@@ -275,8 +279,21 @@ class QTIQuestionMatrix extends QTIAssessmentItem {
 			"stimulus"	=>	qti_get_stimulus($xml->itemBody),
 		);
 
+		// check for a div with the item class name
+		$itembodycontainer = null;
+		foreach ($xml->itemBody->div as $div) {
+			if (!isset($div["class"]) || (string) $div["class"] != "eqiat-qm")
+				continue;
+			// get elements from here
+			$itembodycontainer = $div;
+			break;
+		}
+		// if there was none, get elements from itemBody
+		if (is_null($itembodycontainer))
+			$itembodycontainer = $xml->itemBody;
+
 		// count the choiceInteractions
-		$questioncount = count($xml->itemBody->choiceInteraction);
+		$questioncount = count($itembodycontainer->choiceInteraction);
 
 		// no good if there are no questions
 		if ($questioncount == 0)
@@ -292,7 +309,7 @@ class QTIQuestionMatrix extends QTIAssessmentItem {
 
 		// ensure some stuff for each question
 		$q = 0;
-		foreach ($xml->itemBody->choiceInteraction as $ci) {
+		foreach ($itembodycontainer->choiceInteraction as $ci) {
 			// candidate can only choose one answer
 			if ((string) $ci["maxChoices"] != "1")
 				return 0;

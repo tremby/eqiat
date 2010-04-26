@@ -103,10 +103,26 @@ function showmessages($messages, $title = "Message", $class = null) {
 }
 
 // validate a string of QTI XML or SimpleXML element
+// only accepts assessmentItems
 // $errors, $warnings and $messages should be arrays
 function validateQTI($xml, &$errors, &$warnings, &$messages) {
-	if ($xml instanceof SimpleXMLElement)
-		$xml = $xml->asXML();
+	if ($xml instanceof SimpleXMLElement) {
+		$sxml = $xml;
+		$xml = $sxml->asXML();
+	} else {
+		// check it's valid XML
+		$sxml = simplexml_load_string($xml);
+		if ($sxml === false) {
+			$errors[] = "What was supposed to be a QTI file is not valid XML";
+			return false;
+		}
+	}
+
+	// make sure it's an assessment item
+	if ($sxml->getName() != "assessmentItem") {
+		$errors[] = "Not a QTI assessment item";
+		return false;
+	}
 
 	$pipes = null;
 	$validate = proc_open("./run.sh", array(array("pipe", "r"), array("pipe", "w"), array("pipe", "w")), $pipes, dirname(dirname(__FILE__)) . "/validate");
@@ -183,30 +199,50 @@ function xml_remove_wrapper_element($xml) {
 
 // get non-interaction XML from a QTI itemBody node (that is, the stimulus)
 function qti_get_stimulus(SimpleXMLElement $ib) {
-	$itemBodyIgnore = array(
-		// subclasses of block:
-		"customInteraction", "positionObjectStage",
-		// subclasses of blockInteraction, which is an abstract subclass of 
-		// block:
+	$stimulus = simplexml_load_string('<stimulus xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"/>', null);
+	foreach ($ib->children() as $child) {
+		if (containsQTIInteraction($child))
+			continue;
+
+		// doesn't contain a QTI interaction so it counts as stimulus
+		simplexml_append($stimulus, $child);
+	}
+
+	return xml_remove_wrapper_element($stimulus->asXML());
+}
+
+// return true if the given SimpleXML element contains a QTI interaction
+function containsQTIInteraction(SimpleXMLElement $xml) {
+	$qtiInteractions = array(
+		// subclasses of interaction:
+		"customInteraction", "positionObjectInteraction",
+		// subclasses of blockInteraction
 		"associateInteraction", "choiceInteraction", "drawingInteraction", 
-		"extendedTextInteraction", "gapMatchInteraction", 
-		"hottextInteraction", "matchInteraction", "mediaInteraction", 
-		"orderInteraction", "sliderInteraction", "uploadInteraction",
-		// subclasses of graphicInteraction, which is an abstract subclass 
-		// of blockInteraction:
+		"extendedTextInteraction", "gapMatchInteraction", "hottextInteraction", 
+		"matchInteraction", "mediaInteraction", "orderInteraction", 
+		"sliderInteraction", "uploadInteraction",
+		// subclasses of subclasses of inlineInteraction:
+		"endAttemptInteraction", "inlineChoiceInteraction", 
+		"textEntryInteraction",
+		// subclasses of graphicInteraction
 		"graphicAssociateInteraction", "graphicGapMatchInteraction", 
 		"graphicOrderInteraction", "hotspotInteraction", 
 		"selectPointInteraction",
 	);
 
-	$stimulus = simplexml_load_string('<stimulus xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"/>', null);
-	foreach ($ib->children() as $child) {
-		if (in_array($child->getName(), $itemBodyIgnore))
-			continue;
-		simplexml_append($stimulus, $child);
+	// if this element is an interaction return true
+	if (in_array($xml->getName(), $qtiInteractions))
+		return true;
+
+	// if any children contain interactions return true
+	foreach ($xml->children() as $child) {
+		if (containsQTIInteraction($child))
+			return true;
 	}
 
-	return xml_remove_wrapper_element($stimulus->asXML());
+	// this isn't an interaction and there are no interactions in children so 
+	// return false
+	return false;
 }
 
 // get array of items, one of each type
@@ -511,24 +547,14 @@ function handleupload(&$errors, &$warnings, &$messages) {
 // take xml and optionally a metadata array and try and put it all in a QTI 
 // object or return false, populating $errors etc
 function xmltoqtiobject($xml, &$errors, &$warnings, &$messages, $metadata = array(), $newidentifier = false) {
-	// make sure it's valid XML
-	$xml = simplexml_load_string($xml);
-	if ($xml === false) {
-		$errors[] = "What was supposed to be a QTI file is not valid XML";
-		return false;
-	}
-
-	// make sure it's an assessment item
-	if ($xml->getName() != "assessmentItem") {
-		$errors[] = "Didn't find a QTI assessment item";
-		return false;
-	}
-
 	// make sure it's valid QTI
 	if (!validateQTI($xml, $errors, $warnings, $messages)) {
 		$errors[] = "The assessment item found is not valid QTI";
 		return false;
 	}
+
+	// load to SimpleXML object
+	$xml = simplexml_load_string($xml);
 
 	// test against supported item types
 	$items = item_types();

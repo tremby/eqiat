@@ -434,8 +434,12 @@ class QTITextEntry extends QTIAssessmentItem {
 				simplexml_append($ib, $stimulus);
 		}
 
+		// div with class eqiat-te
+		$d = $ib->addChild("div");
+		$d->addAttribute("class", "eqiat-te");
+
 		// body text
-		$bt = $ib->addChild("div");
+		$bt = $d->addChild("div");
 		$bt->addAttribute("class", "textentrytextbody");
 		$text = xmlspecialchars($this->data["textbody"]);
 		$text = preg_replace('%\n\n+%', "</p><p>", $text);
@@ -512,11 +516,25 @@ class QTITextEntry extends QTIAssessmentItem {
 		$data = array(
 			"itemtype"	=>	$this->itemType(),
 			"title"		=>	(string) $xml["title"],
+			"stimulus"	=>	qti_get_stimulus($xml->itemBody),
 		);
+
+		// check for a div with the item class name
+		$itembodycontainer = null;
+		foreach ($xml->itemBody->div as $div) {
+			if (!isset($div["class"]) || (string) $div["class"] != "eqiat-te")
+				continue;
+			// get elements from here
+			$itembodycontainer = $div;
+			break;
+		}
+		// if there was none, get elements from itemBody
+		if (is_null($itembodycontainer))
+			$itembodycontainer = $xml->itemBody;
 
 		// get the text body and remove it from the tree
 		$tb = null;
-		foreach ($xml->itemBody->children() as $child) {
+		foreach ($itembodycontainer->children() as $child) {
 			if ($child->getName() == "div" && isset($child["class"]) && (string) $child["class"] == "textentrytextbody") {
 				$tb = dom_import_simplexml($child);
 				$tb->parentNode->removeChild($tb);
@@ -587,9 +605,6 @@ class QTITextEntry extends QTIAssessmentItem {
 		// fail if there are no gaps
 		if (count($gaps) == 0)
 			return 0;
-
-		// get stimulus
-		$data["stimulus"] = qti_get_stimulus($xml->itemBody);
 
 		// add responses and their scores to data
 		$g = 0;

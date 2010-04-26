@@ -346,15 +346,19 @@ class QTIExtendedMatchingItem extends QTIAssessmentItem {
 				simplexml_append($ib, $stimulus);
 		}
 
+		// div with class eqiat-emi
+		$d = $ib->addChild("div");
+		$d->addAttribute("class", "eqiat-emi");
+
 		// list the options
 		$options = "";
 		for ($o = 0; array_key_exists("option_{$o}_optiontext", $this->data); $o++)
-			$options .= "<tr><th>" . chr(ord("A") + $o) . "</th><td>" . xmlspecialchars($this->data["option_{$o}_optiontext"]) . "</td></tr>";
-		simplexml_append($ib, simplexml_load_string('<table class="emioptions"><tbody>' . $options . '</tbody></table>'));
+			$options .= "<li>" . xmlspecialchars($this->data["option_{$o}_optiontext"]) . "</li>";
+		simplexml_append($d, simplexml_load_string('<ol class="emioptions">' . $options . '</ol>'));
 
 		// questions
 		for ($q = 0; array_key_exists("question_{$q}_prompt", $this->data); $q++) {
-			$ci = $ib->addChild("choiceInteraction");
+			$ci = $d->addChild("choiceInteraction");
 			$ci->addAttribute("maxChoices", "0");
 			$ci->addAttribute("minChoices", "0");
 			$ci->addAttribute("shuffle", "false");
@@ -426,10 +430,24 @@ class QTIExtendedMatchingItem extends QTIAssessmentItem {
 		$data = array(
 			"itemtype"	=>	$this->itemType(),
 			"title"		=>	(string) $xml["title"],
+			"stimulus"	=>	qti_get_stimulus($xml->itemBody),
 		);
 
+		// check for a div with the item class name
+		$itembodycontainer = null;
+		foreach ($xml->itemBody->div as $div) {
+			if (!isset($div["class"]) || (string) $div["class"] != "eqiat-emi")
+				continue;
+			// get elements from here
+			$itembodycontainer = $div;
+			break;
+		}
+		// if there was none, get elements from itemBody
+		if (is_null($itembodycontainer))
+			$itembodycontainer = $xml->itemBody;
+
 		// count the choiceInteractions
-		$questioncount = count($xml->itemBody->choiceInteraction);
+		$questioncount = count($itembodycontainer->choiceInteraction);
 
 		// no good if there are no questions
 		if ($questioncount == 0)
@@ -445,17 +463,29 @@ class QTIExtendedMatchingItem extends QTIAssessmentItem {
 
 		// check the stimulus for the options and collect them
 		$options = array();
-		foreach ($xml->itemBody->table as $table) {
-			if (!isset($table["class"]) || (string) $table["class"] != "emioptions")
+		foreach ($itembodycontainer->ol as $ol) {
+			if (!isset($ol["class"]) || (string) $ol["class"] != "emioptions")
 				continue;
-			if (count($table->tbody) != 1 || count($table->tbody->tr) < 2)
+			if (count($ol->li) < 2)
 				return 0;
-			foreach ($table->tbody->tr as $row) {
-				if (count($row->td) != 1)
-					return 0;
-				$options[] = (string) $row->td;
-			}
+			foreach ($ol->li as $listitem)
+				$options[] = (string) $listitem;
 			break;
+		}
+		if (empty($options)) {
+			// check for table for backwards compatibility
+			foreach ($itembodycontainer->table as $table) {
+				if (!isset($table["class"]) || (string) $table["class"] != "emioptions")
+					continue;
+				if (count($table->tbody) != 1 || count($table->tbody->tr) < 2)
+					return 0;
+				foreach ($table->tbody->tr as $row) {
+					if (count($row->td) != 1)
+						return 0;
+					$options[] = (string) $row->td;
+				}
+				break;
+			}
 		}
 		if (empty($options))
 			return 0;
@@ -464,19 +494,9 @@ class QTIExtendedMatchingItem extends QTIAssessmentItem {
 		foreach ($options as $k => $option)
 			$data["option_{$k}_optiontext"] = $option;
 
-		// get stimulus, first removing the options table
-		foreach ($xml->itemBody->children() as $child) {
-			if ($child->getName() == "table" && isset($child["class"]) && (string) $child["class"] == "emioptions") {
-				$dom = dom_import_simplexml($child);
-				$dom->parentNode->removeChild($dom);
-				break;
-			}
-		}
-		$data["stimulus"] = qti_get_stimulus($xml->itemBody);
-
 		// ensure some stuff for each question
 		$q = 0;
-		foreach ($xml->itemBody->choiceInteraction as $ci) {
+		foreach ($itembodycontainer->choiceInteraction as $ci) {
 			// questions are multiple response so fail if maxChoices is 1. don't 
 			// care about minChoices
 			if ((string) $ci["maxChoices"] == "1")
