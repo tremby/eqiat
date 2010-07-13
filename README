@@ -64,8 +64,8 @@ To add a custom item type add a new class to the classes/itemtypes subdirectory
 QTIAssessmentItem (classes/QTIAssessmentItem.class.php) for guidelines.
 
 To add a custom item action add a new class to the classes/itemactions 
-subdirectory -- see the existing item types and the documentation in the parent 
-class ItemAction (classes/ItemAction.class.php) for guidelines.
+subdirectory -- see the existing item actions and the documentation in the 
+parent class ItemAction (classes/ItemAction.class.php) for guidelines.
 
 In case further customization is necessary, here is a brief overview of the 
 application structure:
